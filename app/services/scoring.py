@@ -2,8 +2,8 @@
 
 import joblib
 
+from app.ml.artifacts import MODEL_PATH
 from app.ml.features import FEATURE_NAMES, build_features
-from app.ml.train import MODEL_PATH
 from app.models.customer import Customer
 from app.models.serasa import SerasaQuery
 

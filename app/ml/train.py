@@ -10,7 +10,6 @@ pendência no README.
 """
 
 import argparse
-from pathlib import Path
 
 import joblib
 import pandas as pd
@@ -19,11 +18,8 @@ from sklearn.metrics import classification_report, roc_auc_score
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
+from app.ml.artifacts import ARTIFACT_DIR, MODEL_PATH, MODEL_VERSION
 from app.ml.features import FEATURE_NAMES
-
-ARTIFACT_DIR = Path(__file__).parent / "artifacts"
-MODEL_PATH = ARTIFACT_DIR / "credit_score_model.joblib"
-MODEL_VERSION = "v0-skeleton"
 
 
 def train(dataset_path: str) -> None:
