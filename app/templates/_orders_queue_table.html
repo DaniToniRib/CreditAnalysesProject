@@ -1,0 +1,40 @@
+<table id="queue-table">
+  <tr>
+    <th>Cliente</th>
+    <th>Doc</th>
+    <th>Valor pedido</th>
+    <th>Consumo total</th>
+    <th>Limite calculado</th>
+    <th>Status</th>
+    <th>Decisão</th>
+  </tr>
+  {% for o in orders %}
+  <tr class="status-{{ o.status.value }}">
+    <td><a href="/dashboard/customers/{{ o.customer.sap_card_code }}">{{ o.customer.name }}</a></td>
+    <td>{{ o.sap_doc_num or "—" }}</td>
+    <td>R$ {{ "%.2f"|format(o.amount) }}</td>
+    <td>{{ "R$ %.2f"|format(o.total_consumption_at_analysis) if o.total_consumption_at_analysis is not none else "em análise" }}</td>
+    <td>{{ "R$ %.2f"|format(o.credit_limit_at_analysis) if o.credit_limit_at_analysis is not none else "—" }}</td>
+    <td>{{ o.status.value }}</td>
+    <td>
+      {% if o.status.value in ("aprovado_com_ressalva", "bloqueado") %}
+      <form
+        hx-post="/dashboard/orders/{{ o.id }}/decision"
+        hx-target="#queue-table"
+        hx-swap="outerHTML"
+        class="decision-form"
+      >
+        <input type="text" name="reviewer" placeholder="Seu nome" required size="12">
+        <input type="text" name="notes" placeholder="Observação (opcional)" size="16">
+        <button type="submit" name="approve" value="true">Aprovar</button>
+        <button type="submit" name="approve" value="false">Rejeitar</button>
+      </form>
+      {% else %}
+      <em>aguardando análise</em>
+      {% endif %}
+    </td>
+  </tr>
+  {% else %}
+  <tr><td colspan="7">Nenhum pedido pendente.</td></tr>
+  {% endfor %}
+</table>

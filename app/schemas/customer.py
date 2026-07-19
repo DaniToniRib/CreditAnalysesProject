@@ -66,3 +66,20 @@ class CustomerPanelOut(BaseModel):
     financial_history: list[FinancialRecordOut]
 
     model_config = {"from_attributes": True}
+
+
+class CustomerListItemOut(BaseModel):
+    sap_card_code: str
+    name: str
+    current_score: int | None
+    current_credit_limit: float | None
+
+    model_config = {"from_attributes": True}
+
+
+class CreditLimitOverrideIn(BaseModel):
+    """Sobrescrita manual do limite de crédito calculado (ex.: decisão da diretoria)."""
+
+    limit: float
+    reason: str
+    overridden_by: str

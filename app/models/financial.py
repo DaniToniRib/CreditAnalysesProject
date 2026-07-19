@@ -76,4 +76,10 @@ class Order(Base):
     analyzed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     received_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
 
+    # Preenchidos quando um usuário decide manualmente um pedido em
+    # "aprovado_com_ressalva" ou "bloqueado" (ver POST /orders/{id}/decision)
+    reviewed_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    review_notes: Mapped[str | None] = mapped_column(String(500), nullable=True)
+
     customer: Mapped["Customer"] = relationship(back_populates="orders")

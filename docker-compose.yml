@@ -5,9 +5,16 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - ./app:/app/app
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
     restart: unless-stopped
 
   worker:
@@ -15,7 +22,8 @@ services:
     env_file: .env
     command: celery -A app.tasks.celery_app worker --loglevel=INFO
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - ./app:/app/app
     restart: unless-stopped
@@ -25,13 +33,19 @@ services:
     env_file: .env
     command: celery -A app.tasks.celery_app beat --loglevel=INFO
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     volumes:
       - ./app:/app/app
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
     restart: unless-stopped
 
 # O SQL Server é externo (servidor Windows do SAP B1 ou instância dedicada),

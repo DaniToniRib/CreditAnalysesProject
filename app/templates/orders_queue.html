@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Fila de pedidos — Análise de Crédito</title>
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
+    h1 { font-size: 1.4rem; }
+    table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+    th, td { border: 1px solid #eee; padding: 0.5rem 0.7rem; text-align: left; font-size: 0.9rem; vertical-align: top; }
+    th { background: #fafafa; }
+    a { color: #1a4dab; }
+    .decision-form { display: flex; gap: 0.3rem; flex-wrap: wrap; align-items: center; }
+    .decision-form input { padding: 0.2rem; }
+    .decision-form button { cursor: pointer; padding: 0.25rem 0.6rem; }
+    .decision-form button[value="true"] { background: #1a7a3c; color: white; border: none; border-radius: 4px; }
+    .decision-form button[value="false"] { background: #b00020; color: white; border: none; border-radius: 4px; }
+    .status-bloqueado { background: #fff4f4; }
+    .status-aprovado_com_ressalva { background: #fffaf0; }
+  </style>
+</head>
+<body>
+  <h1>Fila de pedidos pendentes</h1>
+  <p>Pedidos em análise automática, aprovados com ressalva (limite excedido sem restrição grave na Serasa) ou bloqueados (restrição grave: PEFIN, protesto ou ação judicial).</p>
+
+  {% include "_orders_queue_table.html" %}
+</body>
+</html>

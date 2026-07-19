@@ -3,6 +3,7 @@ from app.models.financial import FinancialRecord, Order
 from app.models.serasa import SerasaQuery
 from app.models.score import CreditScoreHistory
 from app.models.credit_limit import CreditLimitHistory
+from app.models.sync_state import SyncState
 
 __all__ = [
     "Customer",
@@ -11,4 +12,5 @@ __all__ = [
     "SerasaQuery",
     "CreditScoreHistory",
     "CreditLimitHistory",
+    "SyncState",
 ]

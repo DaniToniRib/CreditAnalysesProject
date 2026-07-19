@@ -35,6 +35,10 @@ class Settings(BaseSettings):
     log_level: str = "INFO"
     secret_key: str
 
+    # Chave usada por integrações (SAP, sistemas internos) para chamar a API
+    # via header `X-API-Key`
+    api_key: str
+
     @property
     def sqlalchemy_database_uri(self) -> str:
         driver = self.db_driver.replace(" ", "+")

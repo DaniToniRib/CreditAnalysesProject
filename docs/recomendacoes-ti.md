@@ -26,10 +26,12 @@ docker compose exec api alembic upgrade head
 ```
 
 Serviços:
-- `api`: aplicação FastAPI (porta 8000)
+- `api`: aplicação FastAPI (porta 8000) — expõe a API JSON (`/customers`, `/orders`, protegida por `X-API-Key`) e o painel HTML (`/dashboard/...`, sem API key)
 - `worker`: processa análises de crédito assíncronas (Celery)
-- `beat`: agenda a reavaliação mensal da carteira
+- `beat`: agenda o polling de pedidos novos (5 em 5 min) e a reavaliação mensal da carteira
 - `redis`: fila de tasks
+
+Painel para uso do financeiro/comercial: `http://<servidor>:8000/dashboard/orders/queue`.
 
 ## Backups
 
@@ -38,8 +40,9 @@ Serviços:
 
 ## Segurança
 
-- Restringir acesso à porta 8000 (API) à rede interna ou VPN — não expor diretamente à internet sem autenticação/API gateway.
-- Rotacionar credenciais da Serasa e do usuário SAP periodicamente.
+- Restringir acesso à porta 8000 à rede interna ou VPN — o painel `/dashboard/...` **não** exige autenticação própria (pensado para uso interno) e depende inteiramente dessa restrição de rede. Não expor a porta 8000 diretamente à internet.
+- A API JSON (`/customers`, `/orders`) exige o header `X-API-Key`. Gerar um valor forte (`openssl rand -hex 32`) para a variável `API_KEY` no `.env` e distribuí-lo apenas às integrações que precisam chamar a API (ex.: outro sistema interno que cria pedidos manualmente).
+- Rotacionar credenciais da Serasa, do usuário SAP e o `API_KEY` periodicamente.
 - Habilitar TLS na frente da API (reverse proxy — Nginx/Caddy) antes de expor além da rede interna.
 
 ## Systemd (alternativa sem Docker)

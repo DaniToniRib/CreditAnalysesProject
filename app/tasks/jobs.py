@@ -5,10 +5,10 @@ from app.connectors.serasa_client import SerasaClient
 from app.database import SessionLocal
 from app.models.customer import Customer
 from app.models.financial import Order
-from app.services.credit_limit import RULE_VERSION, calculate_credit_limit
+from app.services.customer_sync import sync_customer_master_data
 from app.services.history_sync import sync_customer_financial_history
-from app.services.order_analysis import analyze_order
-from app.services.scoring import calculate_score
+from app.services.order_analysis import analyze_order, record_score_and_limit
+from app.services.order_ingestion import poll_new_sap_orders
 from app.services.serasa_service import get_or_query_serasa
 from app.tasks.celery_app import celery_app
 
@@ -31,6 +31,22 @@ def analyze_order_task(self, order_id: int) -> None:
         db.close()
 
 
+@celery_app.task(name="app.tasks.jobs.poll_new_orders_task")
+def poll_new_orders_task() -> None:
+    """Busca pedidos novos no SAP B1 e dispara a análise de crédito de cada um."""
+    db = SessionLocal()
+    sap_client = SAPServiceLayerClient()
+    try:
+        new_orders = poll_new_sap_orders(db, sap_client)
+        for order in new_orders:
+            analyze_order_task.delay(order.id)
+        if new_orders:
+            logger.info("%s pedido(s) novo(s) detectado(s) no SAP", len(new_orders))
+    finally:
+        sap_client.close()
+        db.close()
+
+
 @celery_app.task(name="app.tasks.jobs.recalculate_all_customers_task")
 def recalculate_all_customers_task() -> None:
     """Reavaliação periódica de score/limite de toda a carteira de clientes."""
@@ -40,15 +56,13 @@ def recalculate_all_customers_task() -> None:
     try:
         for customer in db.query(Customer).all():
             try:
+                sync_customer_master_data(db, customer, sap_client)
                 sync_customer_financial_history(db, customer, sap_client)
                 serasa_query = get_or_query_serasa(db, customer, serasa_client)
-                score_result = calculate_score(customer, serasa_query)
-                calculate_credit_limit(customer, score_result.score)
-                # O salvamento completo do histórico de score/limite segue o
-                # mesmo padrão de `order_analysis.analyze_order`, sem o vínculo
-                # com um pedido específico — reaproveitar aquela lógica aqui
-                # ao consolidar (evitar duplicação de código antes de ter uso real).
+                record_score_and_limit(db, customer, serasa_query)
+                db.commit()
             except Exception:  # noqa: BLE001
+                db.rollback()
                 logger.exception(
                     "Falha ao reavaliar cliente %s na reavaliação periódica",
                     customer.sap_card_code,
