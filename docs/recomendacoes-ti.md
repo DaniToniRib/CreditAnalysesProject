@@ -44,6 +44,21 @@ Painel para uso do financeiro/comercial: `http://<servidor>:8000/dashboard/order
 - A API JSON (`/customers`, `/orders`) exige o header `X-API-Key`. Gerar um valor forte (`openssl rand -hex 32`) para a variável `API_KEY` no `.env` e distribuí-lo apenas às integrações que precisam chamar a API (ex.: outro sistema interno que cria pedidos manualmente).
 - Rotacionar credenciais da Serasa, do usuário SAP e o `API_KEY` periodicamente.
 - Habilitar TLS na frente da API (reverse proxy — Nginx/Caddy) antes de expor além da rede interna.
+- **`DB_TRUST_SERVER_CERTIFICATE`**: vem `true` por padrão (aceita certificado autoassinado do SQL Server, comum em instalações on-prem). Assim que houver um certificado válido configurado no SQL Server, trocar para `false` no `.env` — caso contrário a conexão com o banco fica exposta a ataques man-in-the-middle.
+- **Habilitar "Dependabot alerts"** no repositório GitHub (Settings → Security → Code security → Dependabot alerts). Já existe `.github/dependabot.yml` configurado para abrir PRs semanais de atualização de dependências Python/Docker, mas o alerta de vulnerabilidade em si precisa ser ligado manualmente nas configurações do repositório (não é algo que se configura por arquivo).
+- **Redis**: não fica exposto fora da rede interna do Docker Compose (nenhuma porta publicada para o host) — não expor a porta 6379 ao publicar o compose em produção, mesmo que pareça conveniente para debug.
+- **Rate limiting**: a API limita requisições por IP (`RATE_LIMIT_PER_MINUTE` no `.env`, padrão 120/min) para dificultar força bruta contra a `API_KEY` e abuso do painel. Se algum sistema legítimo fizer picos de requisição maiores que isso, ajustar essa variável.
+
+### Checklist de atualização de dependências (revisão de segurança de 2026-07-19)
+
+As seguintes dependências tinham CVEs conhecidas nas versões originalmente fixadas e foram atualizadas no `requirements.txt`:
+
+| Pacote | Versão antiga | Versão corrigida | CVE(s) |
+|---|---|---|---|
+| `jinja2` | 3.1.4 | 3.1.6 | CVE-2025-27516 (sandbox breakout) |
+| `python-multipart` | 0.0.19 | 0.0.32 | CVE-2026-53539, CVE-2026-40347, CVE-2026-24486 |
+
+Ao atualizar dependências no futuro, rodar `pip list --outdated` e conferir CVEs conhecidas (ex.: `pip-audit`) antes de subir para produção — o Dependabot (uma vez com os alertas habilitados) automatiza parte disso.
 
 ## Systemd (alternativa sem Docker)
 

@@ -1,0 +1,40 @@
+# Segredos — nunca devem entrar na imagem Docker (ficam só no host/orquestrador)
+.env
+.env.*
+!.env.example
+
+# Controle de versão
+.git
+.gitignore
+
+# Ambientes virtuais e artefatos Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.venv*/
+
+# Testes e ferramentas de desenvolvimento
+tests/
+pytest.ini
+.pytest_cache/
+
+# Artefatos de ML (modelo treinado não deve ir na imagem base)
+app/ml/artifacts/
+
+# Logs e dados locais
+*.log
+logs/
+*.db
+*.sqlite3
+
+# Documentação (não necessária dentro do container)
+docs/
+README.md
+
+# IDE / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

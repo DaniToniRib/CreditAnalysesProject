@@ -9,7 +9,7 @@ mas com content-type e autenticação diferentes).
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -46,7 +46,7 @@ def get_customer_panel_html(request: Request, customer: Customer = Depends(get_c
 @router.get("/customers/{card_code}/report.pdf")
 def get_customer_report_pdf_html(
     customer: Customer = Depends(get_customer_or_404),
-    months: int = DEFAULT_PERIOD_MONTHS,
+    months: int = Query(default=DEFAULT_PERIOD_MONTHS, ge=1, le=120),
 ) -> Response:
     pdf_bytes = generate_customer_report_pdf(customer, months=months)
     filename = f"relatorio-credito-{customer.sap_card_code}.pdf"

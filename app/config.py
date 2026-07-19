@@ -1,6 +1,7 @@
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 
 class Settings(BaseSettings):
@@ -13,6 +14,10 @@ class Settings(BaseSettings):
     db_user: str
     db_password: str
     db_driver: str = "ODBC Driver 18 for SQL Server"
+    # Em produção, com um certificado válido configurado no SQL Server,
+    # trocar para False para que a conexão valide o certificado de verdade
+    # (evita ataques man-in-the-middle na conexão com o banco).
+    db_trust_server_certificate: bool = True
 
     # SAP Business One Service Layer
     sap_service_layer_url: str
@@ -39,13 +44,25 @@ class Settings(BaseSettings):
     # via header `X-API-Key`
     api_key: str
 
+    # Limite de requisições por IP por minuto (todas as rotas, exceto /health)
+    rate_limit_per_minute: int = 120
+
     @property
-    def sqlalchemy_database_uri(self) -> str:
-        driver = self.db_driver.replace(" ", "+")
-        return (
-            f"mssql+pyodbc://{self.db_user}:{self.db_password}"
-            f"@{self.db_server}:{self.db_port}/{self.db_name}"
-            f"?driver={driver}&TrustServerCertificate=yes"
+    def sqlalchemy_database_uri(self) -> URL:
+        # Usa URL.create em vez de montar a string manualmente: senhas com
+        # caracteres especiais (@, :, /, ?, #) quebrariam (ou, pior,
+        # alterariam silenciosamente) uma URL construída por f-string.
+        return URL.create(
+            "mssql+pyodbc",
+            username=self.db_user,
+            password=self.db_password,
+            host=self.db_server,
+            port=self.db_port,
+            database=self.db_name,
+            query={
+                "driver": self.db_driver,
+                "TrustServerCertificate": "yes" if self.db_trust_server_certificate else "no",
+            },
         )
 
 

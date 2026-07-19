@@ -60,6 +60,21 @@ scripts/                      Scripts de instalação/deploy
 3. Pedidos que não foram aprovados automaticamente aparecem em `GET /dashboard/orders/queue`, onde um humano aprova/rejeita (`POST /dashboard/orders/{id}/decision`), registrando quem decidiu e por quê.
 4. O painel do cliente (`GET /dashboard/customers/{card_code}`) mostra Score atual, limite atual, última consulta Serasa e os históricos completos.
 
+## Segurança
+
+Auditoria de segurança feita em 2026-07-19 (ver histórico de commits). Resumo do que foi encontrado e corrigido:
+
+- **Injeção OData no conector SAP** (crítico): `card_code` era interpolado sem escape nos filtros OData enviados ao Service Layer, permitindo que um valor malicioso alterasse a consulta (ex.: `X' or CardCode eq 'Y`). Corrigido em `app/connectors/sap_service_layer.py` (escape de aspas simples + URL-encoding).
+- **`.env` podia vazar para dentro da imagem Docker**: não havia `.dockerignore`. Adicionado, excluindo `.env`, `.git`, artefatos de teste/ML etc. do build context.
+- **URL de conexão do SQL Server montada por f-string**: uma senha com `@`, `:`, `/` ou `?` quebrava (ou distorcia) a connection string. Trocado para `sqlalchemy.engine.URL.create(...)`, que escapa corretamente.
+- **Celery sem serializer explícito**: se o broker Redis fosse comprometido, um serializer pickle permitiria execução remota de código ao desserializar uma task maliciosa. Fixado explicitamente em JSON.
+- **Sem rate limiting nem headers de segurança**: adicionado `app/api/middleware.py` — limite de requisições por IP (`RATE_LIMIT_PER_MINUTE`, padrão 120/min, contador no Redis) e headers `X-Content-Type-Options`, `X-Frame-Options`, `Content-Security-Policy`, `Referrer-Policy` em toda resposta.
+- **Dependências com CVEs conhecidas**: `jinja2` (CVE-2025-27516) e `python-multipart` (CVE-2026-53539, CVE-2026-40347, CVE-2026-24486) foram atualizadas para versões corrigidas. `.github/dependabot.yml` adicionado para monitoramento contínuo (falta habilitar "Dependabot alerts" nas configurações do repositório no GitHub — não é algo configurável por arquivo).
+- **Validação de entrada**: parâmetro `?months=` nos endpoints de relatório PDF agora tem limites (1–120); payloads de pedido/decisão/override de limite ganharam validação de tamanho/sinal nos campos.
+- **`TrustServerCertificate` fixo no código**: virou configurável (`DB_TRUST_SERVER_CERTIFICATE`, padrão `true` para instalações on-prem com certificado autoassinado — trocar para `false` quando houver certificado válido).
+
+Aceito conscientemente (decisão já discutida com o usuário): o painel HTML (`/dashboard/...`) não tem autenticação própria — depende de restrição de rede/VPN, documentado em `docs/recomendacoes-ti.md`. A única saída de rede do sistema é a consulta à Serasa (inerente à funcionalidade); o painel carrega `htmx.js` via CDN pública por decisão explícita do usuário.
+
 ## Setup local
 
 ```bash
@@ -77,7 +92,7 @@ pip install -r requirements.txt
 pytest
 ```
 
-**Nota:** os testes cobrem lógica pura (classificação de status financeiro, consumo, limite, score heurístico, resumo financeiro/tendência de Score, dedupe de ingestão de pedidos via SQLite em memória, formatação de log JSON) e não dependem de SQL Server real. As 27 asserções passam (`27 passed`), executadas de fato nesta máquina — não é confirmado só por leitura de código. A única lacuna: `scikit-learn`/`pandas` não instalam nesta instalação específica de Python 3.14 (módulo `ctypes` quebrado), então o caminho de `app/services/scoring.py` que carrega um modelo `.joblib` já treinado não foi exercitado (só o fallback heurístico, usado enquanto não há modelo treinado). O gerador de PDF (`app/services/pdf_report.py`) foi validado gerando um PDF real com dados fictícios via o próprio código do projeto. Rodar a suíte no container Docker cobre esse último ponto também.
+**Nota:** os testes cobrem lógica pura (classificação de status financeiro, consumo, limite, score heurístico, resumo financeiro/tendência de Score, dedupe de ingestão de pedidos via SQLite em memória, formatação de log JSON, escape de injeção OData, rate limiting) e não dependem de SQL Server real. As 34 asserções passam (`34 passed`), executadas de fato nesta máquina — não é confirmado só por leitura de código. Lacunas conhecidas: (1) `scikit-learn`/`pandas` não instalam nesta instalação específica de Python 3.14 (módulo `ctypes` quebrado), então o caminho de `app/services/scoring.py` que carrega um modelo `.joblib` já treinado não foi exercitado; (2) importar `app.main` fim a fim nesta máquina esbarra em outra consequência do mesmo `ctypes` quebrado (o `click`, dependência do Celery, usa `ctypes` só para suporte a console do Windows) — não afeta o container Docker/Linux de destino, onde esse código sequer é executado. O gerador de PDF (`app/services/pdf_report.py`) foi validado gerando um PDF real com dados fictícios via o próprio código do projeto. Rodar a suíte completa no container Docker cobre essas lacunas.
 
 ## Status
 

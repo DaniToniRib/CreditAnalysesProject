@@ -17,6 +17,7 @@ TODO ao integrar com o SAP real:
 """
 
 from datetime import date
+from urllib.parse import quote
 
 import httpx
 from tenacity import retry, stop_after_attempt, wait_exponential
@@ -27,6 +28,16 @@ settings = get_settings()
 
 # Página razoável para não sobrecarregar o Service Layer em consultas amplas
 PAGE_SIZE = 100
+
+
+def _escape_odata_literal(value: str) -> str:
+    """Escapa um valor para uso seguro dentro de um literal string OData
+    (`'...'`), dobrando aspas simples conforme a especificação OData.
+
+    Sem isso, um `card_code` como `X' or CardCode eq 'Y` quebraria o literal
+    e injetaria uma condição arbitrária no filtro enviado ao Service Layer.
+    """
+    return value.replace("'", "''")
 
 
 class SAPServiceLayerClient:
@@ -86,13 +97,15 @@ class SAPServiceLayerClient:
         return results
 
     def get_business_partner(self, card_code: str) -> dict:
-        response = self._request("GET", f"/BusinessPartners('{card_code}')")
+        key = quote(_escape_odata_literal(card_code), safe="")
+        response = self._request("GET", f"/BusinessPartners('{key}')")
         return response.json()
 
     def get_receivables_history(self, card_code: str, since: date) -> list[dict]:
         """Histórico de títulos de contas a receber (pagos e em aberto) desde `since`."""
+        escaped_card_code = _escape_odata_literal(card_code)
         params = {
-            "$filter": f"CardCode eq '{card_code}' and DocDate ge {since.isoformat()}",
+            "$filter": f"CardCode eq '{escaped_card_code}' and DocDate ge {since.isoformat()}",
             "$select": (
                 "DocEntry,DocNum,DocDate,DocDueDate,DocTotal,PaidToDate,"
                 "DocumentStatus,UpdateDate"

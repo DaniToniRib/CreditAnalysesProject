@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Depends, Query, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_customer_or_404, get_db, verify_api_key
@@ -47,7 +47,7 @@ def get_customer_panel_json(customer: Customer = Depends(get_customer_or_404)) -
 @router.get("/{card_code}/report.pdf")
 def get_customer_report_pdf(
     customer: Customer = Depends(get_customer_or_404),
-    months: int = DEFAULT_PERIOD_MONTHS,
+    months: int = Query(default=DEFAULT_PERIOD_MONTHS, ge=1, le=120),
 ) -> Response:
     """Relatório em PDF: histórico financeiro (pago, em atraso, atraso médio,
     no vencimento) e evolução do Score no período — para análises que

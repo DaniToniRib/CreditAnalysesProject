@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.models.financial import FinancialRecordStatus
 
@@ -80,6 +80,6 @@ class CustomerListItemOut(BaseModel):
 class CreditLimitOverrideIn(BaseModel):
     """Sobrescrita manual do limite de crédito calculado (ex.: decisão da diretoria)."""
 
-    limit: float
-    reason: str
-    overridden_by: str
+    limit: float = Field(ge=0)
+    reason: str = Field(min_length=1, max_length=500)
+    overridden_by: str = Field(min_length=1, max_length=100)

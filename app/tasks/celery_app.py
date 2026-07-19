@@ -14,6 +14,15 @@ celery_app = Celery(
     include=["app.tasks.jobs"],
 )
 
+# Serialização explícita em JSON (nunca pickle): se o broker Redis for
+# comprometido ou exposto por engano, pickle permitiria execução remota de
+# código arbitrário ao desserializar uma task maliciosa. JSON não tem esse
+# risco. O padrão do Celery já é JSON desde a v4, mas deixamos explícito de
+# propósito em vez de depender do default.
+celery_app.conf.task_serializer = "json"
+celery_app.conf.result_serializer = "json"
+celery_app.conf.accept_content = ["json"]
+
 celery_app.conf.beat_schedule = {
     "poll-novos-pedidos-sap": {
         "task": "app.tasks.jobs.poll_new_orders_task",
