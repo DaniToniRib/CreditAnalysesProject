@@ -1,0 +1,34 @@
+fastapi==0.115.6
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+pydantic-settings==2.6.1
+
+# Banco de dados (SQL Server)
+sqlalchemy==2.0.36
+pyodbc==5.2.0
+alembic==1.14.0
+
+# Tasks assíncronas
+celery==5.4.0
+redis==5.2.0
+
+# HTTP client para SAP Service Layer e Serasa API
+httpx==0.28.1
+
+# Painel (server-rendered)
+jinja2==3.1.4
+python-multipart==0.0.19
+
+# Machine learning
+scikit-learn==1.5.2
+pandas==2.2.3
+numpy==2.1.3
+joblib==1.4.2
+
+# Utilidades
+python-dotenv==1.0.1
+tenacity==9.0.0
+
+# Testes
+pytest==8.3.4
+pytest-asyncio==0.24.0

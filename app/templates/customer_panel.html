@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Painel de Crédito — {{ panel.name }}</title>
+  <script src="https://unpkg.com/htmx.org@2.0.3"></script>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 2rem; color: #1a1a1a; }
+    h1 { font-size: 1.4rem; }
+    .cards { display: flex; gap: 1rem; margin: 1.5rem 0; flex-wrap: wrap; }
+    .card { border: 1px solid #ddd; border-radius: 8px; padding: 1rem; min-width: 180px; }
+    .card .label { font-size: 0.8rem; color: #666; }
+    .card .value { font-size: 1.6rem; font-weight: 600; }
+    table { border-collapse: collapse; width: 100%; margin-top: 0.5rem; }
+    th, td { border: 1px solid #eee; padding: 0.4rem 0.6rem; text-align: left; font-size: 0.9rem; }
+    th { background: #fafafa; }
+    .status-aberto_vencido { color: #b00020; font-weight: 600; }
+    .status-pago_em_atraso { color: #b06000; }
+  </style>
+</head>
+<body>
+  <h1>{{ panel.name }} <small>({{ panel.sap_card_code }})</small></h1>
+
+  <div class="cards">
+    <div class="card">
+      <div class="label">Score interno</div>
+      <div class="value">{{ panel.current_score.score if panel.current_score else "—" }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Limite calculado</div>
+      <div class="value">
+        {{ "R$ %.2f"|format(panel.current_credit_limit.calculated_limit) if panel.current_credit_limit else "—" }}
+      </div>
+    </div>
+    <div class="card">
+      <div class="label">Limite SAP (cadastrado)</div>
+      <div class="value">{{ "R$ %.2f"|format(panel.sap_credit_limit) if panel.sap_credit_limit else "—" }}</div>
+    </div>
+    <div class="card">
+      <div class="label">Score Serasa (última consulta)</div>
+      <div class="value">{{ panel.latest_serasa_query.score if panel.latest_serasa_query else "—" }}</div>
+    </div>
+  </div>
+
+  {% if panel.latest_serasa_query %}
+  <h2>Última consulta Serasa</h2>
+  <table>
+    <tr><th>PEFIN</th><th>REFIN</th><th>Protestos</th><th>Ações judiciais</th><th>Cheques devolvidos</th><th>Consultado em</th></tr>
+    <tr>
+      <td>{{ panel.latest_serasa_query.pefin_count }} (R$ {{ "%.2f"|format(panel.latest_serasa_query.pefin_total_amount) }})</td>
+      <td>{{ panel.latest_serasa_query.refin_count }} (R$ {{ "%.2f"|format(panel.latest_serasa_query.refin_total_amount) }})</td>
+      <td>{{ panel.latest_serasa_query.protests_count }}</td>
+      <td>{{ panel.latest_serasa_query.lawsuits_count }}</td>
+      <td>{{ panel.latest_serasa_query.checks_returned_count }}</td>
+      <td>{{ panel.latest_serasa_query.queried_at.strftime("%d/%m/%Y %H:%M") }}</td>
+    </tr>
+  </table>
+  {% endif %}
+
+  <h2>Histórico de consultas Serasa</h2>
+  <table>
+    <tr><th>Data</th><th>Score</th><th>PEFIN</th><th>REFIN</th><th>Protestos</th><th>Ações judiciais</th><th>Cheques</th></tr>
+    {% for q in panel.serasa_query_history %}
+    <tr>
+      <td>{{ q.queried_at.strftime("%d/%m/%Y %H:%M") }}</td>
+      <td>{{ q.score if q.score is not none else "—" }}</td>
+      <td>{{ q.pefin_count }}</td>
+      <td>{{ q.refin_count }}</td>
+      <td>{{ q.protests_count }}</td>
+      <td>{{ q.lawsuits_count }}</td>
+      <td>{{ q.checks_returned_count }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+
+  <h2>Histórico financeiro (SAP B1)</h2>
+  <table>
+    <tr><th>Doc</th><th>Emissão</th><th>Vencimento</th><th>Pagamento</th><th>Valor</th><th>Status</th><th>Dias atraso</th></tr>
+    {% for r in panel.financial_history %}
+    <tr class="status-{{ r.status.value }}">
+      <td>{{ r.sap_doc_num or "—" }}</td>
+      <td>{{ r.issue_date.strftime("%d/%m/%Y") }}</td>
+      <td>{{ r.due_date.strftime("%d/%m/%Y") }}</td>
+      <td>{{ r.payment_date.strftime("%d/%m/%Y") if r.payment_date else "—" }}</td>
+      <td>R$ {{ "%.2f"|format(r.amount) }}</td>
+      <td>{{ r.status.value }}</td>
+      <td>{{ r.days_late }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+</body>
+</html>
