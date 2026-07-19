@@ -10,7 +10,7 @@ alembic==1.14.0
 
 # Tasks assíncronas
 celery==5.4.0
-redis==5.2.0
+redis==8.0.1
 
 # HTTP client para SAP Service Layer e Serasa API
 httpx==0.28.1
