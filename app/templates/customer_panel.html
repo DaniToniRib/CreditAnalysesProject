@@ -16,10 +16,18 @@
     th { background: #fafafa; }
     .status-aberto_vencido { color: #b00020; font-weight: 600; }
     .status-pago_em_atraso { color: #b06000; }
+    .actions { display: flex; justify-content: space-between; align-items: center; }
+    .btn-pdf {
+      background: #1a4dab; color: white; text-decoration: none;
+      padding: 0.5rem 1rem; border-radius: 6px; font-size: 0.9rem;
+    }
   </style>
 </head>
 <body>
-  <p><a href="/dashboard/orders/queue">&larr; Fila de pedidos</a></p>
+  <div class="actions">
+    <p><a href="/dashboard/orders/queue">&larr; Fila de pedidos</a></p>
+    <a class="btn-pdf" href="/dashboard/customers/{{ panel.sap_card_code }}/report.pdf">Baixar relatório em PDF</a>
+  </div>
   <h1>{{ panel.name }} <small>({{ panel.sap_card_code }})</small></h1>
 
   <div class="cards">

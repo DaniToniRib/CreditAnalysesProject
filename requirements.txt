@@ -25,6 +25,9 @@ pandas==2.2.3
 numpy==2.1.3
 joblib==1.4.2
 
+# Relatório PDF (histórico e Score do cliente)
+reportlab==4.2.5
+
 # Utilidades
 python-dotenv==1.0.1
 tenacity==9.0.0

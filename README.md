@@ -32,6 +32,7 @@ Serasa Experian API ──────┘         │
 - **Decisão de crédito**: pedido dentro do limite é aprovado automaticamente; acima do limite sem restrição grave na Serasa vai para **aprovado com ressalva**; com PEFIN/protesto/ação judicial vai para **bloqueado**. Ambos os casos entram na fila de revisão humana (`GET /dashboard/orders/queue`).
 - **Autenticação**: a API JSON (`/customers`, `/orders`) exige header `X-API-Key`, pensada para integrações (SAP, outros sistemas). O painel HTML (`/dashboard/...`) não exige API key — deve ficar restrito por rede/VPN (ver `docs/recomendacoes-ti.md`).
 - **Painel**: server-rendered (Jinja2/HTMX) para simplicidade de deploy — pode ser trocado por um frontend separado (Next.js) depois, sem alterar a API.
+- **Relatório em PDF**: `GET /customers/{card_code}/report.pdf` (API) e `GET /dashboard/customers/{card_code}/report.pdf` (painel, botão "Baixar relatório em PDF") geram um PDF com resumo financeiro (total pago em dia, pago em atraso com atraso médio em dias, em aberto no prazo e vencido), evolução do Score no período (gráfico + tabela, com indicação de melhora/piora) e a última consulta Serasa — ver `app/services/pdf_report.py`. Parâmetro `?months=N` controla o período (padrão 12 meses).
 
 ## Estrutura do projeto
 
@@ -43,7 +44,7 @@ app/
   models/                   Tabelas: cliente, histórico financeiro, pedidos, consultas Serasa, score, limite, checkpoint de sync
   schemas/                  Schemas Pydantic (I/O da API)
   connectors/                Clientes SAP Service Layer e Serasa
-  services/                  Regras de negócio (sync cadastro/histórico, ingestão de pedidos, consumo, score, limite, decisão, painel)
+  services/                  Regras de negócio (sync cadastro/histórico, ingestão de pedidos, consumo, score, limite, decisão, painel, relatório PDF)
   api/routes/                 customers.py e orders.py (API JSON, API key) + dashboard.py (painel HTML, rede restrita)
   tasks/                      Celery (polling de pedidos, análise, reavaliação periódica)
   ml/                         Feature engineering e treino do modelo
@@ -76,7 +77,7 @@ pip install -r requirements.txt
 pytest
 ```
 
-**Nota:** os testes cobrem lógica pura (classificação de status financeiro, consumo, limite, score heurístico, dedupe de ingestão de pedidos via SQLite em memória) e não dependem de SQL Server real. Nesta máquina de desenvolvimento (Windows, Python 3.14) não foi possível executá-los nesta sessão porque a instalação local do Python está com o módulo `ctypes` quebrado — validado apenas via `python -m py_compile`. Rodar em um ambiente Python funcional (ou dentro do container Docker) antes de confiar no resultado.
+**Nota:** os testes cobrem lógica pura (classificação de status financeiro, consumo, limite, score heurístico, resumo financeiro/tendência de Score, dedupe de ingestão de pedidos via SQLite em memória) e não dependem de SQL Server real. Nesta máquina de desenvolvimento (Windows, Python 3.14) não foi possível executá-los nesta sessão porque a instalação local do Python está com o módulo `ctypes` quebrado, o que também impede instalar `pydantic-core`/`pyodbc` em qualquer venv aqui — validado via `python -m py_compile` e, para o gerador de PDF (`app/services/pdf_report.py`), também via um teste manual isolado só com `reportlab` (que não depende de `ctypes`) reproduzindo as mesmas chamadas de gráfico/tabela, que gerou um PDF válido. Rodar a suíte completa em um ambiente Python funcional (ou dentro do container Docker) antes de confiar no resultado.
 
 ## Status
 

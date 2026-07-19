@@ -9,7 +9,7 @@ mas com content-type e autenticação diferentes).
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -18,6 +18,7 @@ from app.models.customer import Customer
 from app.models.financial import Order
 from app.services.order_review import OrderNotReviewableError, apply_manual_decision
 from app.services.panel import build_customer_panel
+from app.services.pdf_report import DEFAULT_PERIOD_MONTHS, generate_customer_report_pdf
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 templates = Jinja2Templates(directory=Path(__file__).resolve().parents[2] / "templates")
@@ -39,6 +40,20 @@ def get_customer_panel_html(request: Request, customer: Customer = Depends(get_c
     panel = build_customer_panel(customer)
     return templates.TemplateResponse(
         "customer_panel.html", {"request": request, "panel": panel}
+    )
+
+
+@router.get("/customers/{card_code}/report.pdf")
+def get_customer_report_pdf_html(
+    customer: Customer = Depends(get_customer_or_404),
+    months: int = DEFAULT_PERIOD_MONTHS,
+) -> Response:
+    pdf_bytes = generate_customer_report_pdf(customer, months=months)
+    filename = f"relatorio-credito-{customer.sap_card_code}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 

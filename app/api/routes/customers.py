@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_customer_or_404, get_db, verify_api_key
@@ -11,6 +11,7 @@ from app.schemas.customer import (
 )
 from app.services.credit_limit import RULE_VERSION
 from app.services.panel import build_customer_panel
+from app.services.pdf_report import DEFAULT_PERIOD_MONTHS, generate_customer_report_pdf
 
 router = APIRouter(prefix="/customers", tags=["customers"], dependencies=[Depends(verify_api_key)])
 
@@ -41,6 +42,23 @@ def list_customers(db: Session = Depends(get_db)) -> list[CustomerListItemOut]:
 @router.get("/{card_code}/panel", response_model=CustomerPanelOut)
 def get_customer_panel_json(customer: Customer = Depends(get_customer_or_404)) -> CustomerPanelOut:
     return build_customer_panel(customer)
+
+
+@router.get("/{card_code}/report.pdf")
+def get_customer_report_pdf(
+    customer: Customer = Depends(get_customer_or_404),
+    months: int = DEFAULT_PERIOD_MONTHS,
+) -> Response:
+    """Relatório em PDF: histórico financeiro (pago, em atraso, atraso médio,
+    no vencimento) e evolução do Score no período — para análises que
+    precisem circular fora do sistema."""
+    pdf_bytes = generate_customer_report_pdf(customer, months=months)
+    filename = f"relatorio-credito-{customer.sap_card_code}.pdf"
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
 
 
 @router.post("/{card_code}/credit-limit/override", response_model=CustomerPanelOut)
